@@ -14,7 +14,7 @@ valid_pos =  ['QB', 'RB', 'WR', 'TE'] ## Only look at data for the QB, RB, WR, T
 ## download the data set with weekly data - # nfl.import_weekly_data(years, columns, downcast) 
 weekly_df = nfl.import_weekly_data(years)
 
-cols_to_drop = ['headshot_url']
+cols_to_drop = ['headshot_url', 'fantasy_points','fantasy_points_ppr']
 col_rename_dict = {'recent_team' : 'team'}
 
 weekly_df = weekly_df.drop(columns= cols_to_drop)
@@ -29,7 +29,7 @@ weekly_df['return_yards_placeholder'] = 0
 pbp_df = pd.read_csv(f'{save_loc}pbp_filtered.csv')
 
 ## Used pbp_df to get runs / passes greater than 40 yards
-def create_play_bonus_df(pbp_df, league_bonus_dict, league_name):
+def create_play_bonus_df(pbp_df, league_bonus_dict, league_name, league_col_prefix=False):
     '''Create a dataframe with bonus points for for yard plays'''
     #league_bonus_dict = td_palooza_bonus
         
@@ -62,18 +62,27 @@ def create_play_bonus_df(pbp_df, league_bonus_dict, league_name):
             team_list.extend([row['possession_team'], row['possession_team']])
             week_list.extend([row['week'], row['week']])
             bonus_point_list.extend([pass_bonus_points, rec_bonus_points])
-            
-    play_bonus_df = pd.DataFrame({
-        'player_name': player_list,
-        'team' : team_list,
-        'week' : week_list,
-        f"{league_name}_play_bonus_fan_pts" : bonus_point_list})       
+    
+    if league_col_prefix is True:
+        play_bonus_df = pd.DataFrame({
+            'player_name': player_list,
+            'team' : team_list,
+            'week' : week_list,
+            f"{league_name}_play_bonus_fan_pts" : bonus_point_list})
+    else:
+        play_bonus_df = pd.DataFrame({
+            'player_name': player_list,
+            'team' : team_list,
+            'week' : week_list,
+            'play_bonus_fan_pts' : bonus_point_list})
+    
     return play_bonus_df
 
 
 
 
-def get_league_fantasy_points(weekly_df, pbp_df, league_scoring_dict, league_bonus_dict, league_name):
+def get_league_fantasy_points(weekly_df, pbp_df, league_scoring_dict, league_bonus_dict,
+                              league_name, league_col_prefix=False):
 
     ## Creating columns for pre-bonus fantasy points and total yard bonus fantasy points
     pre_bonus_fan_pts_list = []
@@ -122,7 +131,6 @@ def get_league_fantasy_points(weekly_df, pbp_df, league_scoring_dict, league_bon
             total_rec_yard_bonus = 0
         
         ## Sum bonuses and assign to row
-        #row[f"{league_name}_total_yard_bonus_fan_pts"] = total_pass_yard_bonus + total_rush_yard_bonus + total_rec_yard_bonus
         total_yard_bonus_fan_pts_list.append(total_pass_yard_bonus + total_rush_yard_bonus + total_rec_yard_bonus)
     
         ## Getting point totals            
@@ -156,32 +164,54 @@ def get_league_fantasy_points(weekly_df, pbp_df, league_scoring_dict, league_bon
             )
         
         ## Sum fantasy points to get total fantasy points pre-bonus
-        #row[f"{league_name}_pre_bonus_fan_pts"] = passing_fan_pts + rushing_fan_pts + receiving_fan_pts + return_fan_pts
         pre_bonus_fan_pts_list.append(passing_fan_pts + rushing_fan_pts + receiving_fan_pts + return_fan_pts)
     
-    weekly_df[f"{league_name}_pre_bonus_fan_pts"] = pre_bonus_fan_pts_list
-    weekly_df[f"{league_name}_total_yard_bonus_fan_pts"] = total_yard_bonus_fan_pts_list
+    if league_col_prefix is True:
+        weekly_df[f"{league_name}_pre_bonus_fan_pts"] = pre_bonus_fan_pts_list
+        weekly_df[f"{league_name}_total_yard_bonus_fan_pts"] = total_yard_bonus_fan_pts_list
+    else:
+        weekly_df['pre_bonus_fan_pts'] = pre_bonus_fan_pts_list
+        weekly_df['total_yard_bonus_fan_pts'] = total_yard_bonus_fan_pts_list
+        
     
     ## Create df to get play based bonuses using create_play_bonus_df function
-    play_bonus_df = create_play_bonus_df(pbp_df, league_bonus_dict, league_name)
+    play_bonus_df = create_play_bonus_df(pbp_df, league_bonus_dict, league_name, league_col_prefix)
     
     result_df = pd.merge(left=weekly_df,
                          right=play_bonus_df,
                          how='left',
                          on=['player_name','team', 'week'])
+   
+    if league_col_prefix is True:
+        result_df[f"{league_name}_play_bonus_fan_pts"] = result_df[f"{league_name}_play_bonus_fan_pts"] .fillna(0)
+        
+        result_df[f"{league_name}_total_fan_pts"] = result_df[f"{league_name}_pre_bonus_fan_pts"] + result_df[f"{league_name}_total_yard_bonus_fan_pts"] +result_df[f"{league_name}_play_bonus_fan_pts"]
     
-    result_df[f"{league_name}_play_bonus_fan_pts"] = result_df[f"{league_name}_play_bonus_fan_pts"] .fillna(0)
+        output_df = result_df[['player_name','team', 'week', f"{league_name}_pre_bonus_fan_pts",
+                               f"{league_name}_total_yard_bonus_fan_pts", f"{league_name}_play_bonus_fan_pts",
+                               f"{league_name}_total_fan_pts"]] # weekly_fantasy_df_w_league_points
+    else:
+        result_df['play_bonus_fan_pts'] = result_df['play_bonus_fan_pts'] .fillna(0)
+        
+        result_df['total_fan_pts'] = result_df['pre_bonus_fan_pts'] + result_df['total_yard_bonus_fan_pts'] + result_df['play_bonus_fan_pts']
     
-    result_df[f"{league_name}_total_fan_pts"] = result_df[f"{league_name}_pre_bonus_fan_pts"] + result_df[f"{league_name}_total_yard_bonus_fan_pts"] +result_df[f"{league_name}_play_bonus_fan_pts"]
+        output_df = result_df[['player_name','team', 'week','pre_bonus_fan_pts', 'total_yard_bonus_fan_pts',
+                               'play_bonus_fan_pts', 'total_fan_pts']] # weekly_fantasy_df_w_league_points
 
-    return result_df[['player_name','team', 'week', f"{league_name}_pre_bonus_fan_pts",
-                      f"{league_name}_total_yard_bonus_fan_pts", f"{league_name}_play_bonus_fan_pts",
-                      f"{league_name}_total_fan_pts"]] # weekly_fantasy_df_w_league_points
-
+    return output_df
 
 
 
-# test_play_bonus_df = create_play_bonus_df(pbp_df, td_palooza_bonuses, 'td_palooza')
+def merge_weekly_df_w_league_points_df(league_points_df,  weekly_df, league_name, save_loc=None, save_df=False):
+    output_df = pd.merge(left=weekly_df,
+                         right=league_points_df,
+                         how='left',
+                         on=['player_name','team', 'week'])
+    if save_df is True:
+        output_df.to_csv(f"{save_loc}league_name_df.csv")
+    
+    return output_df
+    
 
 
 from league_scoring import td_palooza_scoring, td_palooza_bonuses
@@ -190,11 +220,11 @@ td_palooza_points_df = get_league_fantasy_points(weekly_df,
                                                  pbp_df,
                                                  league_scoring_dict=td_palooza_scoring,
                                                  league_bonus_dict=td_palooza_bonuses,
-                                                 league_name='td_palooza')
-### JOIN ABOVE TO WEEKLY DF
-weekly_w_td_palooza = pd.merge(left=weekly_df, 
-                               right=td_palooza_points_df,
-                               how='left',
-                               on=['player_name','team', 'week'])
+                                                 league_name='td_palooza', league_col_prefix=False)
 
-## Test
+### JOIN ABOVE TO WEEKLY DF
+weekly_w_td_palooza_2 = merge_weekly_df_w_league_points_df(td_palooza_points_df,
+                                                           weekly_df,
+                                                           league_name='td_palooza',
+                                                            save_loc=save_loc,
+                                                            save_df=True)
