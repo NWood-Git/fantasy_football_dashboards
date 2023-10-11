@@ -208,7 +208,7 @@ def merge_weekly_df_w_league_points_df(league_points_df,  weekly_df, league_name
                          how='left',
                          on=['player_name','team', 'week'])
     if save_df is True:
-        output_df.to_csv(f"{save_loc}league_name_df.csv")
+        output_df.to_csv(f"{save_loc}{league_name}_df.csv")
     
     return output_df
     
