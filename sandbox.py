@@ -62,8 +62,11 @@ def create_play_bonus_df(pbp_df, league_bonus_dict, league_name, league_col_pref
             'team' : team_list,
             'week' : week_list,
             'play_bonus_fan_pts' : bonus_point_list})
+        
+    ## Need to use Groupby
+    play_bonus_df_output = play_bonus_df.groupby(['player_name', 'team', 'week']).sum().reset_index()
     
-    return play_bonus_df
+    return play_bonus_df_output
 
 
 ## Create data frame wuth fantasy points - this uses the above create_play_bonus_df function
@@ -185,11 +188,12 @@ def get_league_fantasy_points(weekly_input_df, pbp_df, league_scoring_dict, leag
         
         result_df['total_fan_pts'] = result_df['pre_bonus_fan_pts'] + result_df['total_yard_bonus_fan_pts'] + result_df['play_bonus_fan_pts']
     
-        output_df = result_df[['player_name','team', 'week','pre_bonus_fan_pts', 'total_yard_bonus_fan_pts',
+        output_df = result_df[['player_name','team', 'position_group', 'week', 'opponent_team', 'pre_bonus_fan_pts', 'total_yard_bonus_fan_pts',
                                'play_bonus_fan_pts', 'total_fan_pts']] # weekly_fantasy_df_w_league_points
     
-    output_df = output_df.drop_duplicates( keep='first', ignore_index=True)    
-    
+    output_df = output_df.drop_duplicates( keep='first', ignore_index=True)
+    output_df['key'] = output_df.apply(lambda row : f"{row['player_name']}|{row['team']}|{row['position_group']}|{row['week']}", axis=1 )    
+     
     return output_df
 
 
@@ -229,5 +233,3 @@ td_palooza_points_df.to_csv(f"{save_loc}td_palooza_df.csv", index=False)
 #                                                            league_name='td_palooza',
 #                                                            save_loc=save_loc,
 #                                                            save_df=True)
-
-

@@ -26,4 +26,7 @@ weekly_data_df = weekly_data_df[weekly_data_df['position_group'].isin(valid_pos)
 ## NEED TO FIGURE OUT HOW TO ADD RETURN YARDS - USE Play-By-Play DF?
 weekly_data_df['return_yards_placeholder'] = 0
 
+## Add Key column 
+weekly_data_df['key'] = weekly_data_df.apply(lambda row :  f"{row['player_name']}|{row['team']}|{row['position_group']}|{row['week']}", axis=1 )
+
 weekly_data_df.to_csv(f'{save_loc}weekly_data_df.csv', index=False)
