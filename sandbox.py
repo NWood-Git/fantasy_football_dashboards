@@ -233,3 +233,44 @@ td_palooza_points_df.to_csv(f"{save_loc}td_palooza_df.csv", index=False)
 #                                                            league_name='td_palooza',
 #                                                            save_loc=save_loc,
 #                                                            save_df=True)
+
+###############################################################################
+###############################################################################
+
+## Create Defensive Points
+
+def get_dst_points():
+    pass
+
+## Load pbp_df
+
+## Get Scores
+scores_df = pbp_df[['week', 'home_team', 'away_score', 'away_team', 'home_score']].drop_duplicates(keep='first', ignore_index=True)
+
+home_def_df = scores_df[['week', 'home_team', 'away_score']].copy().rename(columns={'home_team':'team_df', 'away_score':'points_allowed'})
+away_def_df = scores_df[['week', 'away_team', 'home_score']].copy().rename(columns={'away_team':'team_df', 'home_score':'points_allowed'})
+
+# home_def_df = home_def_df.rename(columns={'home_team':'team_df', 'away_score':'points_allowed'})
+# away_def_df = away_def_df.rename(columns={'away_team':'team_df', 'home_score':'points_allowed'})
+
+dst_pts_allowed = pd.concat([home_def_df, away_def_df], ignore_index=True)
+
+
+def dst_pts_allowed_fan_pts(pts_allowed, league_dst_scoring_df):
+    if pts_allowed == 0:
+        return league_dst_scoring_df['0_pts_allowed']
+    elif 1 <= pts_allowed <= 6:
+        return league_dst_scoring_df['1_6_pts_allowed']
+    elif 7 <= pts_allowed <= 13:
+        return league_dst_scoring_df['7_13_pts_allowed']
+    elif 14 <= pts_allowed <= 20:
+        return league_dst_scoring_df['14_20_pts_allowed']
+    elif 21 <= pts_allowed <= 27:
+        return league_dst_scoring_df['21_27_pts_allowed']
+    elif 28 <= pts_allowed <= 34:
+        return league_dst_scoring_df['28_34_pts_allowed']
+    elif pts_allowed >= 35:
+        return league_dst_scoring_df['35+_pts_allowed']
+        
+        
+        

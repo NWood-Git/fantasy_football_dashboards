@@ -27,6 +27,25 @@ td_palooza_scoring = {
     'fg_50+' : 5,
     'PAT_made_multiplier' : 1}
 
+td_palooza_dst_scoring = {
+    'sack' : 1,
+    'interception' : 2,
+    'forced_fumble' : 0,
+    'fumble_recovery' : 2,
+    'defensive_td' : 6,
+    'safety' : 2,
+    'block_kick' : 2,
+    '0_pts_allowed' : 10,
+    '1_6_pts_allowed' : 7,
+    '7_13_pts_allowed' : 4,
+    '14_20_pts_allowed' : 1,
+    '21_27_pts_allowed' : 0,
+    '28_34_pts_allowed' : -1,
+    '35+_pts_allowed' : -4,
+    'PAT_returned' : 2,    
+    'return_td' : 6
+    }
+
 td_palooza_bonuses = {
     'play_yd_bonus_len' : 40,
     'pass_300_bonus' : 5,
